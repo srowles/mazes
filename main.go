@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
@@ -12,12 +14,15 @@ func main() {
 	w := a.NewWindow("Mazes")
 
 	maze := grid.New(10, 10)
-	maze.Full()
+	go maze.BinaryTree()
 	container := container.New(&scale{}, maze.Lines()...)
 	container.Resize(fyne.NewSize(800, 600))
 	w.SetContent(container)
 	w.Resize(fyne.NewSize(800, 600))
-
+	go func() {
+		container.Refresh()
+		time.Sleep(time.Second)
+	}()
 	w.ShowAndRun()
 }
 
