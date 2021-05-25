@@ -1,12 +1,7 @@
 package grid
 
 import (
-	"image/color"
 	"sync"
-	"time"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/canvas"
 )
 
 // Cell represents a single cell in the grid
@@ -41,15 +36,14 @@ func New(width, height int) *Grid {
 }
 
 func (g *Grid) BinaryTree() {
-	// Create an empty grid
-	for x := 0; x < g.width; x++ {
-		for y := 0; y < g.height; y++ {
-			time.Sleep(2 * time.Second)
-			g.Lock()
-			// adjust 1 cell
-			g.Unlock()
-		}
-	}
+	// for x := 0; x < g.width; x++ {
+	// 	for y := 0; y < g.height; y++ {
+	// 		time.Sleep(2 * time.Second)
+	// 		g.Lock()
+	// 		// adjust 1 cell
+	// 		g.Unlock()
+	// 	}
+	// }
 }
 
 func (g *Grid) Empty() {
@@ -88,44 +82,4 @@ func (g *Grid) CellAt(p Point) *Cell {
 	g.Lock()
 	defer g.Unlock()
 	return g.cells[p]
-}
-
-var red = color.RGBA{R: 255, A: 255}
-
-func (g *Grid) Lines() []fyne.CanvasObject {
-	var result []fyne.CanvasObject
-	// use single "pixel" lines for the corners
-	for x := 0; x < g.width; x++ {
-		for y := 0; y < g.height; y++ {
-			cell := g.CellAt(Point{X: x, Y: y})
-			sx := x * 10
-			sy := y * 10
-
-			if !cell.ExitNorth {
-				result = append(result, line(sx, sy, 9, 0))
-			}
-			if !cell.ExitWest {
-				result = append(result, line(sx, sy, 0, 9))
-			}
-			if !cell.ExitEast {
-				result = append(result, line(sx+9, sy, 0, 9))
-			}
-			if !cell.ExitSouth {
-				result = append(result, line(sx, sy+9, 9, 0))
-			}
-		}
-	}
-	return result
-}
-
-func line(x, y, w, h int) *canvas.Line {
-	sx := float32(x)
-	sy := float32(y)
-	ex := float32(x + w)
-	ey := float32(y + h)
-	line := canvas.NewLine(red)
-	line.Show()
-	line.Position1 = fyne.NewPos(sx, sy)
-	line.Position2 = fyne.NewPos(ex, ey)
-	return line
 }
