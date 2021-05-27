@@ -17,15 +17,17 @@ func main() {
 	w := a.NewWindow("Mazes")
 
 	maze := grid.New(10, 10)
-	// go maze.BinaryTree()
+	go maze.BinaryTree()
 	cells := createCells(maze)
 	container := container.New(&scale{}, cells...)
 	container.Resize(fyne.NewSize(800, 600))
 	w.SetContent(container)
 	w.Resize(fyne.NewSize(800, 600))
 	go func() {
-		container.Refresh()
-		time.Sleep(time.Second)
+		for {
+			container.Refresh()
+			time.Sleep(100 * time.Millisecond)
+		}
 	}()
 	w.ShowAndRun()
 }
@@ -73,6 +75,7 @@ func createCells(maze *grid.Grid) []fyne.CanvasObject {
 			cw := CellWidget{
 				cell: maze.CellAt(grid.Point{X: x, Y: y}),
 			}
+			cw.ExtendBaseWidget(&cw)
 			cw.Move(fyne.NewPos(float32(x*10), float32(y*10)))
 			cw.Resize(fyne.NewSize(10, 10))
 			result = append(result, &cw)
@@ -136,9 +139,13 @@ func (c *CellWidgetRenderer) Destroy() {
 
 func (c *CellWidgetRenderer) Refresh() {
 	c.north.Hidden = c.cell.ExitNorth
+	c.north.Refresh()
 	c.south.Hidden = c.cell.ExitSouth
+	c.south.Refresh()
 	c.east.Hidden = c.cell.ExitEast
+	c.east.Refresh()
 	c.west.Hidden = c.cell.ExitWest
+	c.west.Refresh()
 }
 
 var red = color.RGBA{R: 255, A: 255}

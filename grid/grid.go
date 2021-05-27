@@ -1,7 +1,9 @@
 package grid
 
 import (
+	"math/rand"
 	"sync"
+	"time"
 )
 
 // Cell represents a single cell in the grid
@@ -36,14 +38,42 @@ func New(width, height int) *Grid {
 }
 
 func (g *Grid) BinaryTree() {
-	// for x := 0; x < g.width; x++ {
-	// 	for y := 0; y < g.height; y++ {
-	// 		time.Sleep(2 * time.Second)
-	// 		g.Lock()
-	// 		// adjust 1 cell
-	// 		g.Unlock()
-	// 	}
-	// }
+	for x := 0; x < g.width; x++ {
+		for y := 0; y < g.height; y++ {
+			time.Sleep(200 * time.Millisecond)
+			// adjust 1 cell
+			cell := g.CellAt(Point{X: x, Y: y})
+			if cell.North == nil {
+				if cell.East == nil {
+					continue
+				}
+				g.carveEast(cell)
+				continue
+			}
+			r := rand.Intn(2)
+			if r == 1 {
+				g.carveEast(cell)
+			} else {
+				g.carveNorth(cell)
+			}
+		}
+	}
+}
+
+func (g *Grid) carveEast(cell *Cell) {
+	if cell.East == nil {
+		return
+	}
+	cell.ExitEast = true
+	cell.East.ExitWest = true
+}
+
+func (g *Grid) carveNorth(cell *Cell) {
+	if cell.North == nil {
+		return
+	}
+	cell.ExitNorth = true
+	cell.North.ExitSouth = true
 }
 
 func (g *Grid) Empty() {
