@@ -17,7 +17,7 @@ func main() {
 	w := a.NewWindow("Mazes")
 
 	maze := grid.New(10, 10)
-	go maze.BinaryTree()
+	// go maze.BinaryTree()
 	cells := createCells(maze)
 	container := container.New(&scale{}, cells...)
 	container.Resize(fyne.NewSize(800, 600))
@@ -36,33 +36,17 @@ type scale struct {
 }
 
 func (s *scale) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	w, h := float32(0), float32(0)
-	for _, o := range objects {
-		pos := o.Position()
-		size := o.MinSize()
-		x := pos.X + size.Width
-		if x > w {
-			w = x
-		}
-		y := pos.Y + size.Height
-		if y > h {
-			h = y
-		}
-	}
-	return fyne.NewSize(w, h)
+	return fyne.NewSize(100, 100)
 }
 
 func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
-	compSize := s.MinSize(objects)
-	scaleX := containerSize.Width / compSize.Width
-	scaleY := containerSize.Height / compSize.Height
 	for _, o := range objects {
-		size := o.Size()
-		size.Height *= scaleY
-		size.Width *= scaleX
+		size := o.MinSize()
+		size.Height *= containerSize.Height
+		size.Width *= containerSize.Width
 		pos := o.Position()
-		pos.X *= scaleX
-		pos.Y *= scaleY
+		pos.X *= containerSize.Width
+		pos.Y *= containerSize.Height
 		o.Resize(size)
 		o.Move(pos)
 	}
@@ -70,16 +54,22 @@ func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
 
 func createCells(maze *grid.Grid) []fyne.CanvasObject {
 	var result []fyne.CanvasObject
+	incx := 1.0 / float32(maze.Width())
+	incy := 1.0 / float32(maze.Height())
+	var X, Y float32
 	for x := 0; x < maze.Width(); x++ {
 		for y := 0; y < maze.Height(); y++ {
 			cw := CellWidget{
 				cell: maze.CellAt(grid.Point{X: x, Y: y}),
 			}
 			cw.ExtendBaseWidget(&cw)
-			cw.Move(fyne.NewPos(float32(x*10), float32(y*10)))
-			cw.Resize(fyne.NewSize(10, 10))
+			cw.Move(fyne.NewPos(X, Y))
+			cw.Resize(fyne.NewSize(incx, incy))
 			result = append(result, &cw)
+			Y += incy
 		}
+		X += incx
+		Y = 0
 	}
 
 	return result
@@ -93,17 +83,17 @@ type CellWidget struct {
 func (c *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	return &CellWidgetRenderer{
 		cell:  c.cell,
-		north: line(0, 0, 10, 0),
-		south: line(0, 10, 10, 0),
-		east:  line(10, 0, 0, 10),
-		west:  line(0, 0, 0, 10),
+		north: line(0, 0, 0.1, 0),
+		south: line(0, 0.1, 0.1, 0),
+		east:  line(0.1, 0, 0, 0.1),
+		west:  line(0, 0, 0, 0.1),
 	}
 }
 
 // MinSize returns the size that this widget should not shrink below
 func (c *CellWidget) MinSize() fyne.Size {
 	c.ExtendBaseWidget(c)
-	return fyne.NewSize(10, 10)
+	return fyne.NewSize(0.1, 0.1)
 }
 
 type CellWidgetRenderer struct {
@@ -126,7 +116,7 @@ func (c *CellWidgetRenderer) Layout(containerSize fyne.Size) {
 }
 
 func (c *CellWidgetRenderer) MinSize() fyne.Size {
-	return fyne.NewSize(10, 10)
+	return fyne.NewSize(0.1, 0.1)
 }
 
 func (c *CellWidgetRenderer) Objects() []fyne.CanvasObject {
@@ -150,11 +140,11 @@ func (c *CellWidgetRenderer) Refresh() {
 
 var red = color.RGBA{R: 255, A: 255}
 
-func line(x, y, w, h int) *canvas.Line {
-	sx := float32(x)
-	sy := float32(y)
-	ex := float32(x + w)
-	ey := float32(y + h)
+func line(x, y, w, h float32) *canvas.Line {
+	sx := x
+	sy := y
+	ex := x + w
+	ey := y + h
 	line := canvas.NewLine(red)
 	line.Show()
 	line.Position1 = fyne.NewPos(sx, sy)
