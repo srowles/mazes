@@ -8,6 +8,7 @@ import (
 
 // Cell represents a single cell in the grid
 type Cell struct {
+	Pos                                      Point
 	North, South, East, West                 *Cell
 	ExitNorth, ExitSouth, ExitEast, ExitWest bool
 }
@@ -37,19 +38,38 @@ func New(width, height int) *Grid {
 	return grid
 }
 
+func (g *Grid) Reset() {
+	for _, c := range g.cells {
+		c.ExitNorth = false
+		c.ExitSouth = false
+		c.ExitEast = false
+		c.ExitWest = false
+	}
+}
+
 func (g *Grid) BinaryTree() {
 	for x := 0; x < g.width; x++ {
 		for y := 0; y < g.height; y++ {
-			time.Sleep(200 * time.Millisecond)
-			// adjust 1 cell
+			time.Sleep(20 * time.Millisecond)
 			cell := g.CellAt(Point{X: x, Y: y})
+			if cell.North == nil && cell.East == nil {
+				// in top right with nothing to carve, so skip
+				continue
+			}
+
 			if cell.North == nil {
-				if cell.East == nil {
-					continue
-				}
+				// cannot carve north, must carve east
 				g.carveEast(cell)
 				continue
 			}
+
+			if cell.East == nil {
+				// cannot carve east, must carve north
+				g.carveNorth(cell)
+				continue
+			}
+
+			// otherwise pick at random
 			r := rand.Intn(2)
 			if r == 1 {
 				g.carveEast(cell)
@@ -79,7 +99,8 @@ func (g *Grid) carveNorth(cell *Cell) {
 func (g *Grid) Empty() {
 	for x := 0; x < g.width; x++ {
 		for y := 0; y < g.height; y++ {
-			g.cells[Point{X: x, Y: y}] = &Cell{}
+			pos := Point{X: x, Y: y}
+			g.cells[pos] = &Cell{Pos: pos}
 		}
 	}
 	for x := 0; x < g.width; x++ {

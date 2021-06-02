@@ -10,7 +10,7 @@ import (
 
 func TestLayout1(t *testing.T) {
 	maze := grid.New(1, 1)
-	cells := createCells(maze)
+	cells := createCells(maze, 10)
 	s := scale{}
 	s.Layout(cells, fyne.NewSize(1000, 1000))
 	for _, c := range cells {
@@ -22,7 +22,7 @@ func TestLayout1(t *testing.T) {
 
 func TestLayout2(t *testing.T) {
 	maze := grid.New(2, 2)
-	cells := createCells(maze)
+	cells := createCells(maze, 10)
 	s := scale{}
 	s.Layout(cells, fyne.NewSize(1000, 1000))
 	assert.Equal(t, fyne.NewSize(500, 500), cells[0].Size())

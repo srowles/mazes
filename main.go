@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
+	"math/rand"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -13,13 +15,29 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UTC().Unix())
+	maze := grid.New(10, 10)
+
 	a := app.New()
 	w := a.NewWindow("Mazes")
+	menu := fyne.NewMainMenu(
+		fyne.NewMenu("File",
+			fyne.NewMenuItem("Quit", func() {
+				w.Close()
+			}),
+		),
+		fyne.NewMenu("Generate",
+			fyne.NewMenuItem("BinaryTree", func() {
+				maze.Reset()
+				maze.BinaryTree()
+			}),
+		),
+	)
+	w.SetMainMenu(menu)
 
-	maze := grid.New(10, 10)
-	// go maze.BinaryTree()
-	cells := createCells(maze)
-	container := container.New(&scale{}, cells...)
+	cells := createCells(maze, 10)
+	container := container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height())}, cells...)
+	// container := container.NewWithoutLayout(cells...)
 	container.Resize(fyne.NewSize(800, 600))
 	w.SetContent(container)
 	w.Resize(fyne.NewSize(800, 600))
@@ -33,6 +51,8 @@ func main() {
 }
 
 type scale struct {
+	cellsWide float32
+	cellsHigh float32
 }
 
 func (s *scale) MinSize(objects []fyne.CanvasObject) fyne.Size {
@@ -40,36 +60,34 @@ func (s *scale) MinSize(objects []fyne.CanvasObject) fyne.Size {
 }
 
 func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
+	xscale := containerSize.Width / (s.cellsWide)
+	yscale := containerSize.Height / (s.cellsHigh)
 	for _, o := range objects {
-		size := o.MinSize()
-		size.Height *= containerSize.Height
-		size.Width *= containerSize.Width
-		pos := o.Position()
-		pos.X *= containerSize.Width
-		pos.Y *= containerSize.Height
-		o.Resize(size)
-		o.Move(pos)
+		if obj, ok := o.(*CellWidget); ok {
+			pos := obj.cell.Pos
+			newX := float32(pos.X) * xscale
+			newY := float32(pos.Y) * yscale
+			o.Resize(fyne.NewSize(xscale, yscale))
+			o.Move(fyne.NewPos(newX, newY))
+		} else {
+			fmt.Printf("%t\n", o)
+		}
 	}
 }
 
-func createCells(maze *grid.Grid) []fyne.CanvasObject {
+func createCells(maze *grid.Grid, size float32) []fyne.CanvasObject {
 	var result []fyne.CanvasObject
-	incx := 1.0 / float32(maze.Width())
-	incy := 1.0 / float32(maze.Height())
-	var X, Y float32
 	for x := 0; x < maze.Width(); x++ {
 		for y := 0; y < maze.Height(); y++ {
 			cw := CellWidget{
 				cell: maze.CellAt(grid.Point{X: x, Y: y}),
+				size: size,
 			}
 			cw.ExtendBaseWidget(&cw)
-			cw.Move(fyne.NewPos(X, Y))
-			cw.Resize(fyne.NewSize(incx, incy))
+			cw.Move(fyne.NewPos(float32(x)*size, float32(y)*size))
+			cw.Resize(fyne.NewSize(size, size))
 			result = append(result, &cw)
-			Y += incy
 		}
-		X += incx
-		Y = 0
 	}
 
 	return result
@@ -78,22 +96,23 @@ func createCells(maze *grid.Grid) []fyne.CanvasObject {
 type CellWidget struct {
 	widget.BaseWidget
 	cell *grid.Cell
+	size float32
 }
 
 func (c *CellWidget) CreateRenderer() fyne.WidgetRenderer {
 	return &CellWidgetRenderer{
 		cell:  c.cell,
-		north: line(0, 0, 0.1, 0),
-		south: line(0, 0.1, 0.1, 0),
-		east:  line(0.1, 0, 0, 0.1),
-		west:  line(0, 0, 0, 0.1),
+		north: line(0, 0, c.size, 0),
+		south: line(0, c.size, c.size, 0),
+		east:  line(c.size, 0, 0, c.size),
+		west:  line(0, 0, 0, c.size),
 	}
 }
 
 // MinSize returns the size that this widget should not shrink below
 func (c *CellWidget) MinSize() fyne.Size {
 	c.ExtendBaseWidget(c)
-	return fyne.NewSize(0.1, 0.1)
+	return fyne.NewSize(c.size, c.size)
 }
 
 type CellWidgetRenderer struct {
@@ -116,7 +135,7 @@ func (c *CellWidgetRenderer) Layout(containerSize fyne.Size) {
 }
 
 func (c *CellWidgetRenderer) MinSize() fyne.Size {
-	return fyne.NewSize(0.1, 0.1)
+	return fyne.NewSize(10, 10)
 }
 
 func (c *CellWidgetRenderer) Objects() []fyne.CanvasObject {
