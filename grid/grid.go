@@ -1,6 +1,7 @@
 package grid
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -24,18 +25,34 @@ type Grid struct {
 	sync.Mutex
 	width, height int
 	cells         map[Point]*Cell
+	// refreshChan will have an emptry struct on it if refresh is required
+	refreshChan chan struct{}
 }
 
 // New creates and returns a pointer to a new grid
 func New(width, height int) *Grid {
 	grid := &Grid{
-		width:  width,
-		height: height,
-		cells:  make(map[Point]*Cell, width*height),
+		width:       width,
+		height:      height,
+		cells:       make(map[Point]*Cell, width*height),
+		refreshChan: make(chan struct{}),
 	}
 	grid.Empty()
 
 	return grid
+}
+
+func (g *Grid) RequiresRefresh() chan struct{} {
+	return g.refreshChan
+}
+
+func (g *Grid) flagRefreshRequired() {
+	select {
+	case g.refreshChan <- struct{}{}:
+		fmt.Println("sent refresh request to channel")
+	default:
+		// do nothing, refresh already pending
+	}
 }
 
 func (g *Grid) Reset() {
@@ -80,12 +97,19 @@ func (g *Grid) BinaryTree() {
 	}
 }
 
+func (g *Grid) Sidewinder() {
+	for row := 0; row < g.height; row++ {
+
+	}
+}
+
 func (g *Grid) carveEast(cell *Cell) {
 	if cell.East == nil {
 		return
 	}
 	cell.ExitEast = true
 	cell.East.ExitWest = true
+	g.flagRefreshRequired()
 }
 
 func (g *Grid) carveNorth(cell *Cell) {
@@ -94,6 +118,7 @@ func (g *Grid) carveNorth(cell *Cell) {
 	}
 	cell.ExitNorth = true
 	cell.North.ExitSouth = true
+	g.flagRefreshRequired()
 }
 
 func (g *Grid) Empty() {
@@ -119,6 +144,7 @@ func (g *Grid) Empty() {
 			}
 		}
 	}
+	g.flagRefreshRequired()
 }
 
 func (g *Grid) Width() int {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image/color"
 	"math/rand"
 	"time"
@@ -16,7 +15,7 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UTC().Unix())
-	maze := grid.New(10, 10)
+	maze := grid.New(30, 30)
 
 	a := app.New()
 	w := a.NewWindow("Mazes")
@@ -31,19 +30,26 @@ func main() {
 				maze.Reset()
 				maze.BinaryTree()
 			}),
+			fyne.NewMenuItem("Sidewinder", func() {
+				maze.Reset()
+				maze.Sidewinder()
+			}),
 		),
 	)
 	w.SetMainMenu(menu)
 
-	cells := createCells(maze, 10)
-	container := container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height())}, cells...)
+	cellSize := float32(10)
+	cells := createCells(maze, cellSize)
+	container := container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height()), size: cellSize}, cells...)
 	// container := container.NewWithoutLayout(cells...)
 	container.Resize(fyne.NewSize(800, 600))
 	w.SetContent(container)
 	w.Resize(fyne.NewSize(800, 600))
 	go func() {
 		for {
+			<-maze.RequiresRefresh()
 			container.Refresh()
+			// limit refresh to max every 100 milliseconds
 			time.Sleep(100 * time.Millisecond)
 		}
 	}()
@@ -51,17 +57,25 @@ func main() {
 }
 
 type scale struct {
-	cellsWide float32
-	cellsHigh float32
+	size       float32
+	cellsWide  float32
+	cellsHigh  float32
+	lastWidth  float32
+	lastHeight float32
 }
 
 func (s *scale) MinSize(objects []fyne.CanvasObject) fyne.Size {
-	return fyne.NewSize(100, 100)
+	return fyne.NewSize(s.size*s.cellsWide, s.size*s.cellsHigh)
 }
 
 func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
-	xscale := containerSize.Width / (s.cellsWide)
-	yscale := containerSize.Height / (s.cellsHigh)
+	if s.lastHeight == containerSize.Height && s.lastWidth == containerSize.Width {
+		return
+	}
+	s.lastHeight = containerSize.Height
+	s.lastWidth = containerSize.Width
+	xscale := containerSize.Width / s.cellsWide
+	yscale := containerSize.Height / s.cellsHigh
 	for _, o := range objects {
 		if obj, ok := o.(*CellWidget); ok {
 			pos := obj.cell.Pos
@@ -69,8 +83,6 @@ func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
 			newY := float32(pos.Y) * yscale
 			o.Resize(fyne.NewSize(xscale, yscale))
 			o.Move(fyne.NewPos(newX, newY))
-		} else {
-			fmt.Printf("%t\n", o)
 		}
 	}
 }
