@@ -1,7 +1,6 @@
 package grid
 
 import (
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -49,7 +48,6 @@ func (g *Grid) RequiresRefresh() chan struct{} {
 func (g *Grid) flagRefreshRequired() {
 	select {
 	case g.refreshChan <- struct{}{}:
-		fmt.Println("sent refresh request to channel")
 	default:
 		// do nothing, refresh already pending
 	}

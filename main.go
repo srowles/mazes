@@ -15,12 +15,16 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UTC().Unix())
-	maze := grid.New(30, 30)
+	maze := grid.New(20, 20)
 
 	a := app.New()
 	w := a.NewWindow("Mazes")
+	var cont *fyne.Container
 	menu := fyne.NewMainMenu(
 		fyne.NewMenu("File",
+			fyne.NewMenuItem("Refresh", func() {
+				cont.Refresh()
+			}),
 			fyne.NewMenuItem("Quit", func() {
 				w.Close()
 			}),
@@ -29,10 +33,12 @@ func main() {
 			fyne.NewMenuItem("BinaryTree", func() {
 				maze.Reset()
 				maze.BinaryTree()
+				cont.Refresh()
 			}),
 			fyne.NewMenuItem("Sidewinder", func() {
 				maze.Reset()
 				maze.Sidewinder()
+				cont.Refresh()
 			}),
 		),
 	)
@@ -40,15 +46,15 @@ func main() {
 
 	cellSize := float32(10)
 	cells := createCells(maze, cellSize)
-	container := container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height()), size: cellSize}, cells...)
-	// container := container.NewWithoutLayout(cells...)
-	container.Resize(fyne.NewSize(800, 600))
-	w.SetContent(container)
+	cont = container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height()), size: cellSize}, cells...)
+	// cont = container.NewWithoutLayout(cells...)
+	cont.Resize(fyne.NewSize(800, 600))
+	w.SetContent(cont)
 	w.Resize(fyne.NewSize(800, 600))
 	go func() {
 		for {
 			<-maze.RequiresRefresh()
-			container.Refresh()
+			cont.Refresh()
 			// limit refresh to max every 100 milliseconds
 			time.Sleep(100 * time.Millisecond)
 		}
