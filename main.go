@@ -30,6 +30,10 @@ func main() {
 			}),
 		),
 		fyne.NewMenu("Generate",
+			fyne.NewMenuItem("Reset", func() {
+				maze.Reset()
+				cont.Refresh()
+			}),
 			fyne.NewMenuItem("BinaryTree", func() {
 				maze.Reset()
 				maze.BinaryTree()
@@ -175,7 +179,7 @@ func (c *CellWidgetRenderer) Refresh() {
 	c.west.Refresh()
 }
 
-var red = color.RGBA{R: 255, A: 255}
+var red = color.RGBA{B: 255, A: 255}
 
 func line(x, y, w, h float32) *canvas.Line {
 	sx := x

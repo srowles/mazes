@@ -84,9 +84,7 @@ func (g *Grid) BinaryTree() {
 				continue
 			}
 
-			// otherwise pick at random
-			r := rand.Intn(2)
-			if r == 1 {
+			if heads() {
 				g.carveEast(cell)
 			} else {
 				g.carveNorth(cell)
@@ -95,9 +93,40 @@ func (g *Grid) BinaryTree() {
 	}
 }
 
+func heads() bool {
+	r := rand.Intn(2)
+	return r == 1
+}
+
 func (g *Grid) Sidewinder() {
 	for row := 0; row < g.height; row++ {
+		var cellRun []*Cell
+		for x := 0; x < g.width; x++ {
+			time.Sleep(20 * time.Millisecond)
+			cell := g.CellAt(Point{X: x, Y: row})
+			cellRun = append(cellRun, cell)
 
+			if cell.East == nil {
+				g.carveNorth(cellRun[rand.Intn(len(cellRun))])
+				cellRun = nil
+				continue
+			}
+			if cell.North == nil && cell.East == nil {
+				// top right, do nothing
+				continue
+			}
+			if cell.North == nil {
+				g.carveEast(cell)
+				continue
+			}
+
+			if heads() {
+				g.carveNorth(cellRun[rand.Intn(len(cellRun))])
+				cellRun = nil
+				continue
+			}
+			g.carveEast(cell)
+		}
 	}
 }
 
