@@ -179,14 +179,14 @@ func (c *CellWidgetRenderer) Refresh() {
 	c.west.Refresh()
 }
 
-var red = color.RGBA{B: 255, A: 255}
+var blue = color.RGBA{R: 0, G: 64, B: 254, A: 255}
 
 func line(x, y, w, h float32) *canvas.Line {
 	sx := x
 	sy := y
 	ex := x + w
 	ey := y + h
-	line := canvas.NewLine(red)
+	line := canvas.NewLine(blue)
 	line.Show()
 	line.Position1 = fyne.NewPos(sx, sy)
 	line.Position2 = fyne.NewPos(ex, ey)
