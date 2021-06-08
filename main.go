@@ -36,11 +36,13 @@ func main() {
 			}),
 			fyne.NewMenuItem("BinaryTree", func() {
 				maze.Reset()
+				cont.Refresh()
 				maze.BinaryTree()
 				cont.Refresh()
 			}),
 			fyne.NewMenuItem("Sidewinder", func() {
 				maze.Reset()
+				cont.Refresh()
 				maze.Sidewinder()
 				cont.Refresh()
 			}),
@@ -49,7 +51,11 @@ func main() {
 	w.SetMainMenu(menu)
 
 	cellSize := float32(10)
-	cells := createCells(maze, cellSize)
+	cellMap := createCells(maze, cellSize)
+	var cells []fyne.CanvasObject
+	for _, cell := range cellMap {
+		cells = append(cells, cell)
+	}
 	cont = container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height()), size: cellSize}, cells...)
 	// cont = container.NewWithoutLayout(cells...)
 	cont.Resize(fyne.NewSize(800, 600))
@@ -57,10 +63,21 @@ func main() {
 	w.Resize(fyne.NewSize(800, 600))
 	go func() {
 		for {
-			<-maze.RequiresRefresh()
-			cont.Refresh()
-			// limit refresh to max every 100 milliseconds
-			time.Sleep(100 * time.Millisecond)
+			p := <-maze.RequiresRefresh()
+			// refresh the cell that changed, and adjacent nsew
+			cellMap[p].Refresh()
+			if c := cellMap[grid.Point{X: p.X + 1, Y: p.Y}]; c != nil {
+				c.Refresh()
+			}
+			if c := cellMap[grid.Point{X: p.X - 1, Y: p.Y}]; c != nil {
+				c.Refresh()
+			}
+			if c := cellMap[grid.Point{X: p.X, Y: p.Y + 1}]; c != nil {
+				c.Refresh()
+			}
+			if c := cellMap[grid.Point{X: p.X, Y: p.Y - 1}]; c != nil {
+				c.Refresh()
+			}
 		}
 	}()
 	w.ShowAndRun()
@@ -97,18 +114,19 @@ func (s *scale) Layout(objects []fyne.CanvasObject, containerSize fyne.Size) {
 	}
 }
 
-func createCells(maze *grid.Grid, size float32) []fyne.CanvasObject {
-	var result []fyne.CanvasObject
+func createCells(maze *grid.Grid, size float32) map[grid.Point]fyne.CanvasObject {
+	result := make(map[grid.Point]fyne.CanvasObject, maze.Width()*maze.Height())
 	for x := 0; x < maze.Width(); x++ {
 		for y := 0; y < maze.Height(); y++ {
+			p := grid.Point{X: x, Y: y}
 			cw := CellWidget{
-				cell: maze.CellAt(grid.Point{X: x, Y: y}),
+				cell: maze.CellAt(p),
 				size: size,
 			}
 			cw.ExtendBaseWidget(&cw)
 			cw.Move(fyne.NewPos(float32(x)*size, float32(y)*size))
 			cw.Resize(fyne.NewSize(size, size))
-			result = append(result, &cw)
+			result[p] = &cw
 		}
 	}
 
@@ -169,14 +187,22 @@ func (c *CellWidgetRenderer) Destroy() {
 }
 
 func (c *CellWidgetRenderer) Refresh() {
-	c.north.Hidden = c.cell.ExitNorth
-	c.north.Refresh()
-	c.south.Hidden = c.cell.ExitSouth
-	c.south.Refresh()
-	c.east.Hidden = c.cell.ExitEast
-	c.east.Refresh()
-	c.west.Hidden = c.cell.ExitWest
-	c.west.Refresh()
+	if c.north.Hidden != c.cell.ExitNorth {
+		c.north.Hidden = c.cell.ExitNorth
+		c.north.Refresh()
+	}
+	if c.south.Hidden != c.cell.ExitSouth {
+		c.south.Hidden = c.cell.ExitSouth
+		c.south.Refresh()
+	}
+	if c.east.Hidden != c.cell.ExitEast {
+		c.east.Hidden = c.cell.ExitEast
+		c.east.Refresh()
+	}
+	if c.west.Hidden != c.cell.ExitWest {
+		c.west.Hidden = c.cell.ExitWest
+		c.west.Refresh()
+	}
 }
 
 var blue = color.RGBA{R: 0, G: 64, B: 254, A: 255}

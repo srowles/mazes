@@ -25,7 +25,7 @@ type Grid struct {
 	width, height int
 	cells         map[Point]*Cell
 	// refreshChan will have an emptry struct on it if refresh is required
-	refreshChan chan struct{}
+	refreshChan chan Point
 }
 
 // New creates and returns a pointer to a new grid
@@ -34,23 +34,19 @@ func New(width, height int) *Grid {
 		width:       width,
 		height:      height,
 		cells:       make(map[Point]*Cell, width*height),
-		refreshChan: make(chan struct{}),
+		refreshChan: make(chan Point, width*height+1),
 	}
 	grid.Empty()
 
 	return grid
 }
 
-func (g *Grid) RequiresRefresh() chan struct{} {
+func (g *Grid) RequiresRefresh() chan Point {
 	return g.refreshChan
 }
 
-func (g *Grid) flagRefreshRequired() {
-	select {
-	case g.refreshChan <- struct{}{}:
-	default:
-		// do nothing, refresh already pending
-	}
+func (g *Grid) flagRefreshRequired(p Point) {
+	g.refreshChan <- p
 }
 
 func (g *Grid) Reset() {
@@ -136,7 +132,7 @@ func (g *Grid) carveEast(cell *Cell) {
 	}
 	cell.ExitEast = true
 	cell.East.ExitWest = true
-	g.flagRefreshRequired()
+	g.flagRefreshRequired(cell.Pos)
 }
 
 func (g *Grid) carveNorth(cell *Cell) {
@@ -145,7 +141,7 @@ func (g *Grid) carveNorth(cell *Cell) {
 	}
 	cell.ExitNorth = true
 	cell.North.ExitSouth = true
-	g.flagRefreshRequired()
+	g.flagRefreshRequired(cell.Pos)
 }
 
 func (g *Grid) Empty() {
@@ -169,9 +165,9 @@ func (g *Grid) Empty() {
 			if y+1 <= g.height {
 				g.cells[Point{X: x, Y: y}].South = g.cells[Point{X: x, Y: y + 1}]
 			}
+			g.flagRefreshRequired(Point{X: x, Y: y})
 		}
 	}
-	g.flagRefreshRequired()
 }
 
 func (g *Grid) Width() int {
