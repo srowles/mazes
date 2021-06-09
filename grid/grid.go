@@ -11,6 +11,7 @@ type Cell struct {
 	Pos                                      Point
 	North, South, East, West                 *Cell
 	ExitNorth, ExitSouth, ExitEast, ExitWest bool
+	Text                                     string
 }
 
 // Point is an x/y coordinate
