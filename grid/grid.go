@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+const (
+	algoWait = 20 * time.Millisecond
+)
+
 // Cell represents a single cell in the grid
 type Cell struct {
 	Pos                                      Point
@@ -20,28 +24,42 @@ func (c *Cell) Clicked() {
 	if c.grid.start == nil {
 		c.grid.start = c
 		c.Text = "S"
-		fmt.Println("start = ", c)
 		c.grid.flagRefreshRequired(c.Pos)
 		return
 	}
 	if c.grid.finish == nil {
 		c.grid.finish = c
 		c.Text = "F"
-		fmt.Println("finish = ", c)
 		c.grid.flagRefreshRequired(c.Pos)
 		go c.grid.Route()
 		return
 	}
 	// reset if clicked 3rd time
-	// TODO clear all cells!
-	c.grid.start.Text = ""
-	c.grid.flagRefreshRequired(c.grid.start.Pos)
-	c.grid.finish.Text = ""
-	c.grid.flagRefreshRequired(c.grid.finish.Pos)
+	for _, c := range c.grid.cells {
+		c.Text = ""
+		c.grid.flagRefreshRequired(c.Pos)
+	}
 	c.grid.finish = nil
 	c.grid.start = c
 	c.grid.start.Text = "S"
 	c.grid.flagRefreshRequired(c.grid.start.Pos)
+}
+
+func (c *Cell) accessible() []*Cell {
+	var cells []*Cell
+	if c.ExitNorth {
+		cells = append(cells, c.North)
+	}
+	if c.ExitSouth {
+		cells = append(cells, c.South)
+	}
+	if c.ExitEast {
+		cells = append(cells, c.East)
+	}
+	if c.ExitWest {
+		cells = append(cells, c.West)
+	}
+	return cells
 }
 
 // Point is an x/y coordinate
@@ -74,7 +92,64 @@ func New(width, height int) *Grid {
 }
 
 func (g *Grid) Route() {
+	distances := make(map[Point]int)
+	var frontier []*Cell
+	dist := 0
+	distances[g.start.Pos] = dist
+	frontier = append(frontier, g.start.accessible()...)
+	for {
+		dist++
+		var newFrontier []*Cell
+		for _, c := range frontier {
+			distances[c.Pos] = dist
+			if c.Text != "F" {
+				c.Text = fmt.Sprintf("%d", dist)
+			}
+			g.flagRefreshRequired(c.Pos)
+			for _, next := range c.accessible() {
+				if _, visited := distances[next.Pos]; !visited {
+					newFrontier = append(newFrontier, next)
+				}
+			}
+		}
+		if len(newFrontier) == 0 {
+			break
+		}
+		frontier = newFrontier
+		time.Sleep(algoWait)
+	}
 
+	time.Sleep(4 * algoWait)
+
+	cell := g.finish
+	for {
+		g.flagRefreshRequired(cell.Pos)
+		nextPoint := g.findNext(distances, cell.Pos)
+		cell = g.CellAt(nextPoint)
+		if cell == g.start {
+			break
+		}
+		cell.Text = "█"
+		time.Sleep(algoWait)
+	}
+
+	for _, c := range g.cells {
+		if c.Text != "█" && c.Text != "S" && c.Text != "F" {
+			c.Text = ""
+			g.flagRefreshRequired(c.Pos)
+		}
+	}
+}
+
+func (g *Grid) findNext(distances map[Point]int, pos Point) Point {
+	current := distances[pos]
+	next := current - 1
+	for _, c := range g.CellAt(pos).accessible() {
+		if distances[c.Pos] == next {
+			return c.Pos
+		}
+	}
+	panic("uhoh")
 }
 
 func (g *Grid) RequiresRefresh() chan Point {
@@ -91,13 +166,14 @@ func (g *Grid) Reset() {
 		c.ExitSouth = false
 		c.ExitEast = false
 		c.ExitWest = false
+		c.Text = ""
 	}
 }
 
 func (g *Grid) BinaryTree() {
 	for x := 0; x < g.width; x++ {
 		for y := 0; y < g.height; y++ {
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(algoWait)
 			cell := g.CellAt(Point{X: x, Y: y})
 			if cell.North == nil && cell.East == nil {
 				// in top right with nothing to carve, so skip
@@ -134,7 +210,7 @@ func (g *Grid) Sidewinder() {
 	for row := 0; row < g.height; row++ {
 		var cellRun []*Cell
 		for x := 0; x < g.width; x++ {
-			time.Sleep(20 * time.Millisecond)
+			time.Sleep(algoWait)
 			cell := g.CellAt(Point{X: x, Y: row})
 			cellRun = append(cellRun, cell)
 
