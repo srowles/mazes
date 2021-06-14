@@ -57,7 +57,6 @@ func main() {
 		cells = append(cells, cell)
 	}
 	cont = container.New(&scale{cellsWide: float32(maze.Width()), cellsHigh: float32(maze.Height()), size: cellSize}, cells...)
-	// cont = container.NewWithoutLayout(cells...)
 	cont.Resize(fyne.NewSize(800, 600))
 	w.SetContent(cont)
 	w.Resize(fyne.NewSize(800, 600))
@@ -79,6 +78,10 @@ func main() {
 				c.Refresh()
 			}
 		}
+	}()
+	go func() {
+		time.After(2 * time.Second)
+		cont.Refresh()
 	}()
 	w.ShowAndRun()
 }
@@ -139,14 +142,23 @@ type CellWidget struct {
 	size float32
 }
 
+func (c *CellWidget) Tapped(*fyne.PointEvent) {
+	c.cell.Clicked()
+}
+
 func (c *CellWidget) CreateRenderer() fyne.WidgetRenderer {
+	tx := canvas.NewText(c.cell.Text, grayBlue)
+	tx.Alignment = fyne.TextAlignCenter
+	tx.TextStyle = fyne.TextStyle{Monospace: true}
+	tx.Move(fyne.NewPos(1, 1))
+	tx.Resize(fyne.NewSize(c.size, c.size))
 	return &CellWidgetRenderer{
 		cell:  c.cell,
 		north: line(0, 0, c.size, 0, blue),
 		south: line(0, c.size, c.size, 0, blue),
 		east:  line(c.size, 0, 0, c.size, blue),
 		west:  line(0, 0, 0, c.size, blue),
-		text:  canvas.NewText("", grayBlue),
+		text:  tx,
 	}
 }
 
@@ -157,13 +169,12 @@ func (c *CellWidget) MinSize() fyne.Size {
 }
 
 type CellWidgetRenderer struct {
-	cell      *grid.Cell
-	north     *canvas.Line
-	south     *canvas.Line
-	east      *canvas.Line
-	west      *canvas.Line
-	text      *canvas.Text
-	textValue string
+	cell  *grid.Cell
+	north *canvas.Line
+	south *canvas.Line
+	east  *canvas.Line
+	west  *canvas.Line
+	text  *canvas.Text
 }
 
 func (c *CellWidgetRenderer) Layout(containerSize fyne.Size) {
@@ -176,6 +187,7 @@ func (c *CellWidgetRenderer) Layout(containerSize fyne.Size) {
 	c.west.Position1 = fyne.NewPos(0, 0)
 	c.west.Position2 = fyne.NewPos(0, containerSize.Height)
 	c.text.Move(fyne.NewPos(0, 0))
+	c.text.Resize(containerSize)
 }
 
 func (c *CellWidgetRenderer) MinSize() fyne.Size {
@@ -183,7 +195,7 @@ func (c *CellWidgetRenderer) MinSize() fyne.Size {
 }
 
 func (c *CellWidgetRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{c.north, c.south, c.east, c.west}
+	return []fyne.CanvasObject{c.north, c.south, c.east, c.west, c.text}
 }
 
 func (c *CellWidgetRenderer) Destroy() {
@@ -207,13 +219,14 @@ func (c *CellWidgetRenderer) Refresh() {
 		c.west.Hidden = c.cell.ExitWest
 		c.west.Refresh()
 	}
-	if c.text.Text != c.textValue {
+	if c.text.Text != c.cell.Text {
 		c.text.Text = c.cell.Text
 		c.text.Refresh()
 	}
 }
 
 var blue = color.RGBA{R: 0, G: 64, B: 254, A: 255}
+var red = color.RGBA{R: 255, A: 255}
 var grayBlue = color.RGBA{R: 169, G: 180, B: 212, A: 128}
 
 func line(x, y, w, h float32, colour color.RGBA) *canvas.Line {
@@ -222,7 +235,6 @@ func line(x, y, w, h float32, colour color.RGBA) *canvas.Line {
 	ex := x + w
 	ey := y + h
 	line := canvas.NewLine(colour)
-	line.Show()
 	line.Position1 = fyne.NewPos(sx, sy)
 	line.Position2 = fyne.NewPos(ex, ey)
 	return line

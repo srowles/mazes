@@ -1,6 +1,7 @@
 package grid
 
 import (
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
@@ -12,6 +13,35 @@ type Cell struct {
 	North, South, East, West                 *Cell
 	ExitNorth, ExitSouth, ExitEast, ExitWest bool
 	Text                                     string
+	grid                                     *Grid
+}
+
+func (c *Cell) Clicked() {
+	if c.grid.start == nil {
+		c.grid.start = c
+		c.Text = "S"
+		fmt.Println("start = ", c)
+		c.grid.flagRefreshRequired(c.Pos)
+		return
+	}
+	if c.grid.finish == nil {
+		c.grid.finish = c
+		c.Text = "F"
+		fmt.Println("finish = ", c)
+		c.grid.flagRefreshRequired(c.Pos)
+		go c.grid.Route()
+		return
+	}
+	// reset if clicked 3rd time
+	// TODO clear all cells!
+	c.grid.start.Text = ""
+	c.grid.flagRefreshRequired(c.grid.start.Pos)
+	c.grid.finish.Text = ""
+	c.grid.flagRefreshRequired(c.grid.finish.Pos)
+	c.grid.finish = nil
+	c.grid.start = c
+	c.grid.start.Text = "S"
+	c.grid.flagRefreshRequired(c.grid.start.Pos)
 }
 
 // Point is an x/y coordinate
@@ -26,7 +56,8 @@ type Grid struct {
 	width, height int
 	cells         map[Point]*Cell
 	// refreshChan will have an emptry struct on it if refresh is required
-	refreshChan chan Point
+	refreshChan   chan Point
+	start, finish *Cell
 }
 
 // New creates and returns a pointer to a new grid
@@ -40,6 +71,10 @@ func New(width, height int) *Grid {
 	grid.Empty()
 
 	return grid
+}
+
+func (g *Grid) Route() {
+
 }
 
 func (g *Grid) RequiresRefresh() chan Point {
@@ -149,7 +184,7 @@ func (g *Grid) Empty() {
 	for x := 0; x < g.width; x++ {
 		for y := 0; y < g.height; y++ {
 			pos := Point{X: x, Y: y}
-			g.cells[pos] = &Cell{Pos: pos}
+			g.cells[pos] = &Cell{Pos: pos, grid: g}
 		}
 	}
 	for x := 0; x < g.width; x++ {
